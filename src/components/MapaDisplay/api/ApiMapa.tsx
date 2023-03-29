@@ -1,27 +1,23 @@
 import { LatLng } from "leaflet";
 
-interface MarkerData {
-  id: number;
+export interface MarkerData {
   folio: number;
   lat: number;
   lng: number;
 }
 
-export async function getMarkers(): Promise<MarkerData[]> {
-  const response = await fetch("http://localhost:8000/markers");
+// 1. Obtener las coordenadas de un endpoint definido
+export async function getCoordinatesByFolio(folio: number): Promise<LatLng> {
+  const response = await fetch(`http://localhost:8000/coordinates/${folio}`);
   if (response.ok) {
     const data = await response.json();
-    return data.map((marker: MarkerData) => ({
-      id: marker.id,
-      folio: marker.folio,
-      lat: marker.lat,
-      lng: marker.lng,
-    }));
+    return new LatLng(data.lat, data.lng);
   } else {
-    throw new Error("Error al obtener los marcadores");
+    throw new Error("Error al obtener las coordenadas");
   }
 }
 
+// 2. Agregar un nuevo punto al mapa
 export async function addMarker(folio: number, lat: number, lng: number): Promise<MarkerData> {
   const response = await fetch("http://localhost:8000/markers", {
     method: "POST",
@@ -34,7 +30,6 @@ export async function addMarker(folio: number, lat: number, lng: number): Promis
   if (response.ok) {
     const data = await response.json();
     return {
-      id: data.id,
       folio: data.folio,
       lat: data.lat,
       lng: data.lng,
@@ -44,8 +39,9 @@ export async function addMarker(folio: number, lat: number, lng: number): Promis
   }
 }
 
-export async function updateMarker(id: number, folio: number, lat: number, lng: number): Promise<MarkerData> {
-  const response = await fetch(`http://localhost:8000/markers/${id}`, {
+// 3. Editar un punto ya existente en el mapa
+export async function updateMarker(folio: number, lat: number, lng: number): Promise<MarkerData> {
+  const response = await fetch(`http://localhost:8000/markers/${folio}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -56,7 +52,6 @@ export async function updateMarker(id: number, folio: number, lat: number, lng: 
   if (response.ok) {
     const data = await response.json();
     return {
-      id: data.id,
       folio: data.folio,
       lat: data.lat,
       lng: data.lng,
@@ -66,15 +61,13 @@ export async function updateMarker(id: number, folio: number, lat: number, lng: 
   }
 }
 
-export async function updateSelectedMarker(lat: number, lng: number): Promise<void> {
-    const selectedMarkerString = localStorage.getItem("selectedMarker") ?? "";
-    const selectedMarker = selectedMarkerString ? JSON.parse(selectedMarkerString) : null;
-    
-  if (selectedMarker) {
-    await updateMarker(selectedMarker.id, selectedMarker.folio, lat, lng);
-  }
-}
+// 4. Eliminar un punto existente
+export async function deleteMarker(folio: number): Promise<void> {
+  const response = await fetch(`http://localhost:8000/markers/${folio}`, {
+    method: "DELETE",
+  });
 
-export function handleMarkerSelection(marker: MarkerData): void {
-  localStorage.setItem("selectedMarker", JSON.stringify(marker));
+  if (!response.ok) {
+    throw new Error("Error al eliminar el marcador");
+  }
 }
